@@ -8,7 +8,7 @@ from scipy.interpolate import UnivariateSpline
 #User-defined quantities
 ########################
 
-aoa = np.radians(0.0)#-9.0)   #Angle of attack
+aoa = np.radians(-9.0)   #Angle of attack
 
 #Dimensional conversion/physical quantities
 lRef = 1.0               #[m]
@@ -28,8 +28,9 @@ save = 0                 #Display (0) or save (1) image
 #############
 #Read in data
 #############
-flow = np.asanyarray(pd.read_csv("reStressesBoundaryProfile.csv"))                  #Sampling points
-coord = np.asanyarray(pd.read_csv("wallCoordinates.csv",skiprows=[0],header=None))  #Surface geometry
+dataDirectory = "/home/guglielmo/Desktop/PostDoc/NACA0012/SECOND_SET_OF_RUNS/naca12_a9_P12_h128_gjp_wakePoints/BoundaryLayerQuantitiesHighestSampling_Finalised_WithCorrections05-05-22/"
+flow = np.asanyarray(pd.read_csv(dataDirectory+"reStressesBoundaryProfile.csv"))                  #Sampling points
+coord = np.asanyarray(pd.read_csv(dataDirectory+"wallCoordinates.csv",skiprows=[0],header=None))  #Surface geometry
 
 ######################
 #Clean and format data
@@ -148,20 +149,8 @@ norm = np.zeros((nAxial,2))
 norm[:,0] = flow[:,1,0]-flow[:,0,0]           
 norm[:,1] = flow[:,1,1]-flow[:,0,1]
 magnitude = np.sqrt(norm[:,0]**2+norm[:,1]**2)
-#magnitude[np.where(magnitude==0.0)] = 1e-10
 norm[:,0] = norm[:,0]/magnitude
 norm[:,1] = norm[:,1]/magnitude
-##Recover tangent
-#tan = np.zeros((nAxial,2))
-#for i in range(1,flow.shape[0]):
-#     tan[i,0] = -(flow[i,0,0]-flow[i-1,0,0])  #Minus due to reversed axial order
-#     tan[i,1] = -(flow[i,0,1]-flow[i-1,0,1])
-#tan[0,0] = tan[1,0]
-#tan[0,1] = tan[1,1]
-#magnitude = np.sqrt(tan[:,0]**2+tan[:,1]**2)
-##magnitude[np.where(magnitude==0.0)] = 1e-10
-#tan[:,0] = tan[:,0]/magnitude
-#tan[:,1] = tan[:,1]/magnitude
 
 #Determine angle
 theta = np.arctan(norm[:,0]/norm[:,1])
@@ -170,10 +159,10 @@ sin = np.sin(theta)
 
 #Rotate
 tempFlow = np.copy(flow)
-#for i in range(0,nAxial):
-#    for j in range(0,nNormal):
-#         flow[i,j,2] = tempFlow[i,j,2]*cos[i]-tempFlow[i,j,3]*sin[i]
-#         flow[i,j,3] = tempFlow[i,j,2]*sin[i]+tempFlow[i,j,3]*cos[i]
+for i in range(0,nAxial):
+    for j in range(0,nNormal):
+        flow[i,j,2] = tempFlow[i,j,2]*cos[i]-tempFlow[i,j,3]*sin[i]
+        flow[i,j,3] = tempFlow[i,j,2]*sin[i]+tempFlow[i,j,3]*cos[i]
 
 #FROM NOW ON THE U and V ARE THE ROTATED QUANTITIES, I.E. U PARALLEL TO SURFACE
 #AND U PERPENDICULAR TO LOCAL SURFACE POSITION. W DOES NOT NEED ROTATION
@@ -227,7 +216,7 @@ if plot!=0:
      if save==1:
            fig = plt.gcf()
            fig.set_size_inches(30, 7)
-           plt.savefig('boundaryLayerHeight_n'+str(n*100)+'.pdf')
+           plt.savefig(dataDirectory+'boundaryLayerHeight_n'+str(n*100)+'.pdf')
      else:
            plt.show()
      plt.close()
@@ -242,7 +231,7 @@ if plot!=0:
      if save==1:
            fig = plt.gcf()
            fig.set_size_inches(30, 7)
-           plt.savefig('localReferenceVelocity_n'+str(int(n*100))+'.pdf')
+           plt.savefig(dataDirectory+'localReferenceVelocity_n'+str(int(n*100))+'.pdf')
      else:
            plt.show()
      plt.close()
@@ -257,7 +246,7 @@ for i in range(0,nAxial):
      output[i,2] = blHeight[i]*lRef          #Height magnitude
      output[i,3] = blURef[i]*uRef            #Reference velocity - wall tangential
      output[i,4] = blVRef[i]*uRef            #Reference velocity - wall normal
-nameOut = "blHeightUref_n"+str(int(n*100))+".csv"
+nameOut = dataDirectory+"blHeightUref_n"+str(int(n*100))+".csv"
 csv_header = "x,y,height,uRef,vRef"
 file_header = csv_header.split(',')
 outData = pd.DataFrame(output)
@@ -294,7 +283,7 @@ if plot!=0:
      plt.grid()
      plt.legend()
      if save==1:
-           plt.savefig('deltaStar_n'+str(int(n*100))+'.pdf') 
+           plt.savefig(dataDirectory+'deltaStar_n'+str(int(n*100))+'.pdf') 
      else:
            plt.show()
      plt.close()           
@@ -321,7 +310,7 @@ if plot!=0:
      plt.title('Momentum Thickness')
      plt.grid()
      if save==1:
-           plt.savefig('theta_n'+str(int(n*100))+'.pdf')  
+           plt.savefig(dataDirectory+'theta_n'+str(int(n*100))+'.pdf')  
      else:
            plt.show()
      plt.close()     
@@ -340,7 +329,7 @@ if plot!=0:
      plt.grid()    
      plt.legend()
      if save==1:
-           plt.savefig('thetaRe_n'+str(int(n*100))+'.pdf')  
+           plt.savefig(dataDirectory+'thetaRe_n'+str(int(n*100))+'.pdf')  
      else:
            plt.show()
      plt.close()
@@ -364,7 +353,7 @@ if plot!=0:
      plt.title('Shape Factor')
      plt.grid()
      if save==1:
-           plt.savefig('H_n'+str(int(n*100))+'.pdf')  
+           plt.savefig(dataDirectory+'H_n'+str(int(n*100))+'.pdf')  
      else:
            plt.show()
      plt.close()             
@@ -380,7 +369,7 @@ for i in range(0,len(theta)):
      dataOut[i,3] = thetaRe[i]
      dataOut[i,4] = H[i]
      
-file_out = 'dispMomentThickReHFact_n'+str(int(n*100))+'.csv'
+file_out = dataDirectory+'dispMomentThickReHFact_n'+str(int(n*100))+'.csv'
 csv_header = "x,deltaStar,Theta,ReTheta,H"
 file_header = csv_header.split(',')
 outData = pd.DataFrame(dataOut)
@@ -410,7 +399,7 @@ if plot!=0:
      plt.title("LE to Mid-Chord")
      plt.grid()
      if save==1:
-           plt.savefig("leToMidChord_n"+str(int(n*100))+".pdf")
+           plt.savefig(dataDirectory+"leToMidChord_n"+str(int(n*100))+".pdf")
      else:
            plt.show()
      plt.close() 
@@ -437,7 +426,7 @@ if plot!=0:
      plt.ylabel('Thwaites Momentum Thickness')
      plt.legend()
      if save==1:
-           plt.savefig('ThwaitesMomentumThickness_n'+str(int(n*100))+'.pdf')
+           plt.savefig(dataDirectory+'ThwaitesMomentumThickness_n'+str(int(n*100))+'.pdf')
      else:
            plt.show()      
 
@@ -449,7 +438,7 @@ for i in range(0,len(axialPositions)):
      thwaitesThetaRe[i,0] = axialPositions[i]*lRef
      thwaitesThetaRe[i,1] = axialThetaSS[i]*lRef
      thwaitesThetaRe[i,2] = axialThetaSS[i]*fitSplineSS(axialPositions[i])/nu
-file_out = 'thwaitesThetaRe_n'+str(int(n*100))+'.csv'
+file_out = dataDirectory+'thwaitesThetaRe_n'+str(int(n*100))+'.csv'
 csv_header = "x,ThetaSS,ReThetaSS"
 file_header = csv_header.split(',')
 outData = pd.DataFrame(thwaitesThetaRe)
@@ -509,7 +498,7 @@ if plot!=0:
      if save==1:
            fig = plt.gcf()
            fig.set_size_inches(30, 7)
-           plt.savefig('blackwelderParameter_n'+str(int(n*100))+'.pdf')
+           plt.savefig(dataDirectory+'blackwelderParameter_n'+str(int(n*100))+'.pdf')
      else:
            plt.show()
      plt.close()           
@@ -519,7 +508,7 @@ blackwelderOut = np.zeros((len(blackwelder),2))
 for i in range(0,len(blackwelder)):
      blackwelderOut[i,0] = X[i]
      blackwelderOut[i,1] = blackwelder[i]
-file_out = "blackwelder_n"+str(int(n*100))+".csv"
+file_out = dataDirectory+"blackwelder_n"+str(int(n*100))+".csv"
 csv_header = "x,blackwelder"
 file_header = csv_header.split(',')
 outData = pd.DataFrame(blackwelderOut)
