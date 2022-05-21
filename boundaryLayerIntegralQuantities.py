@@ -18,17 +18,17 @@ nu = 1/Re                #Kinematic non-dim. incompressible visc. (non-dim.)
 
 #Calculation constants
 coeffThwaites = 0.45     #Literature also indicates 0.47
-n = 0.99                 #Ratio of simulation to inviscid axial velocity to determine boundary layer limit
+n = 0.96                 #Ratio of simulation to inviscid axial velocity to determine boundary layer limit
 xMax = 1.0               #Consider half the chord length for Thwaites theta and Blackwelder
 
 #Plot viewing option
-plot = 0                 #Plot true/false (0/1)
-save = 0                 #Display (0) or save (1) image
+plot = 1                 #Plot true/false (0/1)
+save = 1                 #Display (0) or save (1) image
 
 #############
 #Read in data
 #############
-dataDirectory = "/home/guglielmo/Desktop/PostDoc/NACA0012/SECOND_SET_OF_RUNS/naca12_a9_P12_h128_gjp_wakePoints/BoundaryLayerQuantitiesHighestSampling_Finalised_WithCorrections05-05-22/"
+dataDirectory = "/home/guglielmo/Desktop/PostDoc/NACA0012/SECOND_SET_OF_RUNS/naca12_a12_P12_h128_L1_gjp_wakePoints/BoundaryLayerQuantitiesHighestSampling_Finalised/"
 flow = np.asanyarray(pd.read_csv(dataDirectory+"reStressesBoundaryProfile.csv"))                  #Sampling points
 coord = np.asanyarray(pd.read_csv(dataDirectory+"wallCoordinates.csv",skiprows=[0],header=None))  #Surface geometry
 
@@ -133,7 +133,7 @@ if plot==1:
     plt.title("Aerofoil & Sampling Points")  
     plt.grid()
     if save==1:
-         plt.savefig('geometrySamplingPoints.pdf')     
+         plt.savefig(dataDirectory+'geometrySamplingPoints.pdf')     
     else:
          plt.show()
     plt.close()
@@ -238,19 +238,13 @@ if plot!=0:
 
 print("\nDone boundary layer height and reference axial velocity\n")
 
-#Write out the boundary layer height and reference velocity
-output = np.zeros((nAxial,5))
-for i in range(0,nAxial):
-     output[i,0] = blX[i]*lRef               #x
-     output[i,1] = blY[i]*lRef               #y 
-     output[i,2] = blHeight[i]*lRef          #Height magnitude
-     output[i,3] = blURef[i]*uRef            #Reference velocity - wall tangential
-     output[i,4] = blVRef[i]*uRef            #Reference velocity - wall normal
-nameOut = dataDirectory+"blHeightUref_n"+str(int(n*100))+".csv"
-csv_header = "x,y,height,uRef,vRef"
+#Write out the boundary layer height and reference velocity in AoA un-rotated frame of reference
+output = np.stack((blX*lRef*a1+blY*lRef*a2,-blX*lRef*a2+blY*lRef*a1,np.sqrt((blX*lRef*a1+blY*lRef*a2)**2+(-blX*lRef*a2+blY*lRef*a1)**2),blURef*uRef,blVRef*uRef)).T
+file_out = dataDirectory+"blHeightUref_n"+str(int(n*100))+".csv"
+csv_header = "x,y,height,uParRef,uPerRef"
 file_header = csv_header.split(',')
 outData = pd.DataFrame(output)
-outData.to_csv(nameOut,index=False,header=file_header)
+outData.to_csv(file_out,index=False,header=file_header)
 
 print("\nWritten dimensional estimated boundary layer height and axial velocity to .csv\n")
 
@@ -265,7 +259,7 @@ deltaStar = np.zeros(nAxial)
 integrationLength = np.sqrt((y[len(y)-1]-y[len(y)-2])**2+(x[len(x)-1]-x[len(x)-2])**2) #Points are equidistant
 for i in range(0,nAxial):
      for j in range(0,blIDHeight[i]):
-         integrand[j] = 1.0-(flow[i,j,2]/blURef[i])
+         integrand[j] = 1.0-np.sqrt(flow[i,j,2]**2+flow[i,j,3]**2)/np.sqrt(blURef[i]**2+blVRef[i]**2)
      if blIDHeight[i]>0:
          height = np.sqrt((flow[i,0:blIDHeight[i],0]-flow[i,0,0])**2+(flow[i,0:blIDHeight[i],1]-flow[i,0,1])**2) #Remember to consider the x,y contributions as sampling lines not aligned with cartesian axis
          deltaStar[i] = scipy.integrate.simps(integrand[0:blIDHeight[i]],height,dx=integrationLength)
@@ -295,7 +289,7 @@ integrand = np.zeros(nNormal)
 theta = np.zeros(nAxial)
 for i in range(0,nAxial):
      for j in range(0,blIDHeight[i]):
-         integrand[j] = (1-(flow[i,j,2]/blURef[i]))*(flow[i,j,2]/blURef[i])
+         integrand[j] = (1-np.sqrt(flow[i,j,2]**2+flow[i,j,3]**2)/np.sqrt(blURef[i]**2+blVRef[i]**2))*np.sqrt(flow[i,j,2]**2+flow[i,j,3]**2)/np.sqrt(blURef[i]**2+blVRef[i]**2)
      if blIDHeight[i]>0:
          height = np.sqrt((flow[i,0:blIDHeight[i],0]-flow[i,0,0])**2+(flow[i,0:blIDHeight[i],1]-flow[i,0,1])**2) #Remember to consider the x,y contributions as sampling lines not aligned with cartesian axis
          theta[i] = scipy.integrate.simps(integrand[0:blIDHeight[i]],height,dx=integrationLength)
@@ -384,12 +378,14 @@ index = np.intersect1d(np.where(flow[:,0,0]>=xMin),np.where(flow[:,0,0]<xMax))
 pointX = flow[index,0,0]
 pointY = flow[index,0,1]
 blURefTemp = blURef[index]
+blVRefTemp = blVRef[index]
 
 #Spline can only be used for increasing x
 index = np.argsort(pointX)
 pointX = pointX[index]
 pointY = pointY[index]
 blURefTemp = blURefTemp[index]
+blVRefTemp = blVRefTemp[index]
 
 if plot!=0:
      plt.plot(pointX,pointY,'b',label="Suction Side")
@@ -405,7 +401,7 @@ if plot!=0:
      plt.close() 
 
 #Reconstruct velocity Uref with spline
-fitSplineSS = UnivariateSpline(pointX[:],blURefTemp,s=0.0)
+fitSplineSS = UnivariateSpline(pointX[:],np.sqrt(blURefTemp**2+blVRefTemp**2),s=0.0)
 
 #Determine the x-integration momentum thickness 
 axialPositions = np.arange(0.0,xMax,0.001)
