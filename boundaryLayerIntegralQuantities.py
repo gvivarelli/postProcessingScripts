@@ -474,7 +474,7 @@ for i in range(0,nAxial):
      limits = height[0:blIDHeight[i]]
      param = flow[i,0:blIDHeight[i],-1]
      integral=scipy.integrate.simps(param,limits)
-     blackwelder[i] = integral/(blURef[i])**2
+     blackwelder[i] = integral/(blURef[i]**2+blURef[i]**2)  #Use velocity magnitude
      X[i] = flow[i,0,0]
      Y[i] = flow[i,0,1]
 
