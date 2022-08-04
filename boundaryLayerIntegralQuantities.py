@@ -174,7 +174,7 @@ for i in range(0,nAxial):
 #"General method for determining the boundary layer thickness in nonequilibrium flow", Griffin, Fu and Moin 2021
 #Determine the total pressure profile along every vertical line 
 pTot = np.zeros((nAxial,nNormal,1))
-pTot[:,:,0] = flow[:,:,5]+0.5*(flow[:,:,2]**2+flow[:,:,3]**2)
+pTot[:,:,0] = flow[:,:,5]+0.5*(flow[:,:,2]**2+flow[:,:,3]**2+flow[:,:,4]**2)
 flow = np.append(flow,pTot, axis=2)  
 
 #Now determine the ratio of the actual axial velocity to the inviscid one
